@@ -1,0 +1,80 @@
+Current Issue
+When one user clicks "Next", only the other user is sent to the queue.
+I want both users to go back into the queue and try to match with different users if possible.
+If no other users are available, they can match again.
+
+Requirements
+1. Queue-based matchmaking
+Maintain a waitingUsers array (queue) on the server.
+
+When a user joins:
+
+If queue is empty → add them.
+
+If queue has someone → match and remove both from queue.
+
+2. “Next” button behavior
+When a user clicks "Next":
+
+Server identifies both participants in the current room.
+
+Disconnect the room for both.
+
+Place both users into the waiting queue.
+
+Match them with different users if available.
+
+If no other users are available, they can be matched together again.
+
+3. Disconnect handling
+If a user leaves because of tab close or connection loss:
+
+Partner goes to queue.
+
+Disconnected user is removed from matchmaking.
+
+If “Next” is clicked, both follow the both-to-queue rule.
+
+4. Matching preference
+Try to avoid re-pairing the same two users immediately if other people are waiting.
+
+If no one else is in the queue, allow re-pairing.
+
+5. State cleanup
+On room close:
+
+Remove any signaling data and ICE candidates tied to the room.
+
+Ensure no stale socket IDs remain in queue.
+
+Example Flow
+A joins → goes to queue.
+
+B joins → paired with A (room 1).
+
+C joins → queue.
+
+D joins → paired with C (room 2).
+
+A clicks “Next” →
+
+A and B go to queue.
+
+If C and D are still in a call, A waits for new partner.
+
+If C is free, pair A with C.
+
+B gets paired with first available user (if none, waits).
+
+If only A and B are online, they may reconnect.
+
+Acceptance Criteria
+Clicking “Next” always sends both users to the queue.
+
+Both users should get matched with different people if available.
+
+If no one else is available, they may reconnect with each other.
+
+Calls and queues should remain stable even with repeated fast “Next” clicks.
+
+Do not alter WebRTC signaling; only modify the matchmaking and queue management to support this logic.

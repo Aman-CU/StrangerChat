@@ -1,0 +1,141 @@
+You are to build a full-stack anonymous chat website like Omegle using the following specs:
+
+Goal
+Users can click “Start Chat” to get paired randomly with another online user.
+
+Anonymous: no sign-in required.
+
+Supports text chat in MVP; can be extended to video chat later.
+
+Users can click “Next” to end the current chat and instantly connect to another random stranger.
+
+Must include a Report button to allow users to flag abuse.
+
+Tech Stack Requirements
+Frontend: HTML, CSS, JavaScript (Vanilla or React — pick whichever is faster to set up in Replit).
+
+Backend: Node.js with Express.
+
+Real-time Communication: Socket.IO (for text and later WebRTC signaling).
+
+Queue Management: In-memory array for MVP (replaceable with Redis later).
+
+Hosting: Must run in Replit environment with a single server handling both static frontend and backend API/WebSocket.
+
+Core Features to Implement
+Landing Page
+
+Title: “Stranger Chat”
+
+Button: “Start Chat”
+
+Optional text: “Chat with a random stranger instantly — no sign up required.”
+
+Chat UI
+
+Message display area.
+
+Text input + send button.
+
+“Next” button (disconnect and find a new partner).
+
+“Report” button.
+
+Matchmaking Logic
+
+Maintain a queue of waiting users.
+
+When two users are available, pair them in a unique room.
+
+If one disconnects, notify the other with a message like “Your partner disconnected.”
+
+Messaging
+
+Messages are exchanged in real-time between paired users using Socket.IO rooms.
+
+Reporting
+
+When user clicks “Report,” log the partner’s socket ID and timestamp to server console (for MVP).
+
+Error Handling
+
+Handle cases where user’s partner disconnects mid-chat.
+
+Styling
+
+Minimal but clean CSS so it looks like a real web app (centered layout, chat box styling).
+
+Implementation Steps
+Initialize project
+
+Create a Node.js + Express + Socket.IO setup in Replit.
+
+Serve index.html, style.css, client.js from a public folder.
+
+Backend
+
+Set up / route to serve index.html.
+
+Initialize Socket.IO server.
+
+Create waitingUsers array to hold socket IDs of unmatched users.
+
+When a user clicks “Start Chat,” emit join_queue from client → server adds socket to waiting queue → if two sockets are available, remove both from queue and create a room (use socket.join(roomId)).
+
+Handle message events to emit to the room.
+
+Handle next event: remove from current room, re-add to waiting queue, pair again.
+
+Handle report event: log the partner ID + time.
+
+Handle disconnect event: notify the partner.
+
+Frontend
+
+On “Start Chat” click → emit join_queue.
+
+Listen for paired event → show chat UI.
+
+Send messages on enter key or “send” button.
+
+Append incoming messages to chat box.
+
+Handle “Next” button → emit next.
+
+Handle “Report” button → emit report.
+
+CSS
+
+Make centered container with fixed height message area (scrollable).
+
+Input box + buttons below.
+
+Testing
+
+Open two browser tabs in Replit preview → ensure pairing works.
+
+Test “Next” and “Report” buttons.
+
+Test partner disconnect.
+
+Deliverables
+Fully working Node.js + Express + Socket.IO app in Replit.
+
+/public/index.html, /public/style.css, /public/client.js.
+
+Single server.js handling both static file serving and WebSocket events.
+
+Working MVP with:
+
+Random pairing.
+
+Real-time text messages.
+
+“Next” and “Report” buttons.
+
+Clean styling.
+
+Comments in code explaining key parts.
+
+Note for the AI:
+Keep the code clean and modular. Use short function names but comment every step so I can extend to video chat later using WebRTC. Avoid unnecessary dependencies.

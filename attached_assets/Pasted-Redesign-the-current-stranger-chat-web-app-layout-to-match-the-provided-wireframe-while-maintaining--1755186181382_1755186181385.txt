@@ -1,0 +1,128 @@
+Redesign the current stranger chat web app layout to match the provided wireframe while maintaining full functionality. Apply responsive design principles, smooth animations, and modern UI/UX best practices.
+
+Layout & Components (based on the provided sketch):
+
+Header Section:
+
+Home Button:
+Positioned at the top left. Rounded rectangle style, hover effect (slight scale + color change).
+
+Video Layout Change Controls:
+
+3 layout icons (vertical split, horizontal split, original/default).
+
+On click, transition the app layout smoothly to the selected format.
+
+Entire layout (video + chat) must adjust fluidly to fit the screen with no overflow.
+
+Use CSS transitions (300–500ms) for smooth resizing and element reflow.
+
+Mute Status Indicator:
+
+Small circular icon showing mic mute/unmute status.
+
+Color coded (e.g., red for muted, green for unmuted).
+
+Dark Mode Toggle:
+
+Circular moon icon.
+
+Clicking switches between light/dark themes with smooth color fade transitions.
+
+Main Video Section (Left Side):
+
+Sender Video:
+Large main area, always in correct aspect ratio.
+
+Positioned according to selected layout mode.
+
+Display mirror image of the local stream when showing to the user.
+
+Connection Status & Logo:
+Bottom-left small badge showing current connection status (“Waiting…”, “Connected”, “Disconnected”).
+
+Include small app logo beside status text.
+
+Controls Row (beneath sender video):
+
+Buttons: Video On/Off, Mic On/Off, Mute.
+
+Clearly visible states for active/inactive (color + icon change).
+
+Report Button:
+
+Small, right-aligned button beside status and controls.
+
+Opens a report modal when clicked.
+
+Receiver Video (Small Preview):
+
+Shown in a smaller box overlayed at bottom-right of main video.
+
+Mirror image effect applied to local preview.
+
+Rounded corners with subtle shadow to separate from main background.
+
+Text Chat Section (Right Side):
+
+Title Bar: “Text Chat” at the top, consistent with app theme.
+
+Messages Area:
+
+Scrollable, full height minus input area.
+
+Smooth scroll on new message arrival.
+
+Messages styled with bubbles, different colors for self/other.
+
+Input Row:
+
+Text input field.
+
+Send button with paper-plane icon.
+
+Pressing “Enter” sends the message.
+
+Next Button:
+
+Large, centered below chat.
+
+Clicking disconnects current chat and finds a new partner.
+
+Tags Row (Bottom of Layout):
+
+Display clickable tags (tag1, tag2, etc.).
+
+Selecting a tag filters or prioritizes matching with users having same tags.
+
+Highlight selected tag with a filled style.
+
+Behavior & Interaction Notes:
+
+When a user changes video layout, both video containers (sender + receiver) should adapt instantly to the new arrangement without content overflow.
+
+Dark mode toggle should affect all UI components including text, backgrounds, buttons, and icons.
+
+Smooth animations for:
+
+Switching between layouts.
+
+Toggling dark/light mode.
+
+Video container resizing.
+
+Mirror effect for local preview should persist across layouts and reconnects.
+
+Technical Requirements:
+
+Responsive design: Works on desktop, tablet, and mobile without breaking layout.
+
+Use CSS Flexbox or Grid for layout adjustments.
+
+Apply consistent padding/margins for all components.
+
+Maintain WebRTC functionality exactly as is, only changing the UI layer.
+
+Maintain accessibility (keyboard navigation, ARIA labels for buttons/icons).
+
+Keep the code modular — separate CSS or styled-components for maintainability.
