@@ -692,24 +692,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (room.isVideoCall) {
             storage.addUserToVideoQueue(partnerUser);
-            partnerWs.send(JSON.stringify({
-              type: 'video_waiting',
-              message: 'Looking for someone to video chat with...'
-            }));
+            // Send video_waiting state immediately after partner_disconnected
+            setTimeout(() => {
+              if (partnerWs && partnerWs.readyState === WebSocket.OPEN) {
+                partnerWs.send(JSON.stringify({
+                  type: 'video_waiting',
+                  message: 'Looking for someone to video chat with...'
+                }));
+              }
+            }, 1000);
             // Try to match with others
             setTimeout(async () => {
               await tryMatchVideoUsersWithPreference();
-            }, 500);
+            }, 1500);
           } else {
             storage.addUserToQueue(partnerUser);
-            partnerWs.send(JSON.stringify({
-              type: 'waiting',
-              message: 'Looking for someone to chat with...'
-            }));
+            // Send waiting state immediately after partner_disconnected
+            setTimeout(() => {
+              if (partnerWs && partnerWs.readyState === WebSocket.OPEN) {
+                partnerWs.send(JSON.stringify({
+                  type: 'waiting',
+                  message: 'Looking for someone to chat with...'
+                }));
+              }
+            }, 1000);
             // Try to match with others
             setTimeout(async () => {
               await tryMatchTextUsersWithPreference();
-            }, 500);
+            }, 1500);
           }
         }
 

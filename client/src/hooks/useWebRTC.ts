@@ -17,6 +17,7 @@ interface UseWebRTCReturn {
   callState: 'idle' | 'connecting' | 'connected' | 'failed';
   isMediaReady: boolean;
   reassignVideoStreams: () => void;
+  cleanup: () => void;
 }
 
 // ICE servers configuration for WebRTC - Multiple STUN servers for better NAT traversal
@@ -107,28 +108,59 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
         console.log('Storing remote stream with tracks:', event.streams[0].getTracks().length);
         remoteStreamRef.current = event.streams[0];
         
-        // Immediately assign to video element
+        // Immediately assign to video element with enhanced handling
         if (remoteVideoRef.current) {
           console.log('Assigning remote stream to video element');
           remoteVideoRef.current.srcObject = event.streams[0];
           
-          // Force play with more aggressive retry
+          // Set video properties for better compatibility
+          remoteVideoRef.current.autoplay = true;
+          remoteVideoRef.current.playsInline = true;
+          remoteVideoRef.current.muted = false; // Allow audio from remote peer
+          
+          // Enhanced play with metadata loading wait
           const playVideo = async () => {
             try {
-              await remoteVideoRef.current?.play();
-              console.log('Remote video playing successfully');
+              if (remoteVideoRef.current) {
+                // Wait for metadata to load first
+                if (remoteVideoRef.current.readyState < 1) {
+                  remoteVideoRef.current.addEventListener('loadedmetadata', () => {
+                    console.log('Remote video metadata loaded, attempting play');
+                    remoteVideoRef.current?.play().catch(error => {
+                      console.log('Remote video play failed after metadata:', error);
+                      setTimeout(playVideo, 1000);
+                    });
+                  }, { once: true });
+                } else {
+                  await remoteVideoRef.current.play();
+                  console.log('Remote video playing successfully');
+                }
+              }
             } catch (error) {
               console.log('Remote video play failed, retrying...', error);
-              setTimeout(playVideo, 500);
+              setTimeout(playVideo, 1000);
             }
           };
+          
+          // Immediate attempt and backup
           playVideo();
+          
+          // Also set up a backup attempt
+          setTimeout(() => {
+            if (remoteVideoRef.current && remoteVideoRef.current.paused) {
+              console.log('Remote video still paused, forcing play attempt');
+              remoteVideoRef.current.play().catch(console.error);
+            }
+          }, 2000);
         }
       }
       
-      // Update call state when we have video track
-      if (event.track.kind === 'video') {
-        console.log('Video track received, updating call state to connected');
+      // Update call state when we have both video and audio tracks
+      const hasVideo = event.streams[0]?.getVideoTracks().length > 0;
+      const hasAudio = event.streams[0]?.getAudioTracks().length > 0;
+      
+      if (hasVideo || hasAudio) {
+        console.log('Media tracks received (video:', hasVideo, 'audio:', hasAudio, '), updating call state to connected');
         setCallState('connected');
       }
     };
@@ -215,10 +247,28 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
       console.log('Media stream obtained with', stream.getTracks().length, 'tracks');
       localStreamRef.current = stream;
       
-      // Assign local stream to video element immediately
+      // Assign local stream to video element immediately with enhanced handling
       if (localVideoRef.current) {
         console.log('Assigning local stream to video element');
         localVideoRef.current.srcObject = stream;
+        
+        // Set video properties for better compatibility
+        localVideoRef.current.autoplay = true;
+        localVideoRef.current.playsInline = true;
+        localVideoRef.current.muted = true; // Local video should be muted to prevent echo
+        
+        // Set up event listeners for better video handling
+        localVideoRef.current.addEventListener('loadedmetadata', () => {
+          console.log('Local video metadata loaded');
+        });
+        
+        localVideoRef.current.addEventListener('canplay', () => {
+          console.log('Local video can play');
+        });
+        
+        localVideoRef.current.addEventListener('playing', () => {
+          console.log('Local video started playing');
+        });
         
         // Force play immediately
         try {
@@ -368,6 +418,15 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
               console.log('Adding track for answer:', track.kind);
               peerConnection.addTrack(track, stream);
             });
+          } else {
+            // Ensure tracks are added to peer connection
+            localStreamRef.current.getTracks().forEach(track => {
+              const sender = peerConnection.getSenders().find(s => s.track === track);
+              if (!sender) {
+                console.log('Adding existing track for offer response:', track.kind);
+                peerConnection.addTrack(track, localStreamRef.current!);
+              }
+            });
           }
 
           console.log('Creating answer...');
@@ -485,6 +544,12 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
     if (localStreamRef.current && localVideoRef.current) {
       console.log('Reassigning local stream');
       localVideoRef.current.srcObject = localStreamRef.current;
+      
+      // Set properties for local video
+      localVideoRef.current.autoplay = true;
+      localVideoRef.current.playsInline = true;
+      localVideoRef.current.muted = true;
+      
       localVideoRef.current.play().catch(error => {
         console.log('Local video autoplay prevented:', error);
       });
@@ -494,32 +559,72 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
     if (remoteStreamRef.current && remoteVideoRef.current) {
       console.log('Reassigning remote stream');
       remoteVideoRef.current.srcObject = remoteStreamRef.current;
-      remoteVideoRef.current.play().catch(error => {
-        console.log('Remote video autoplay prevented:', error);
-      });
+      
+      // Set properties for remote video
+      remoteVideoRef.current.autoplay = true;
+      remoteVideoRef.current.playsInline = true;
+      remoteVideoRef.current.muted = false;
+      
+      // Enhanced remote video play with retry mechanism
+      const playRemoteVideo = async () => {
+        try {
+          if (remoteVideoRef.current) {
+            await remoteVideoRef.current.play();
+            console.log('Remote video reassigned and playing');
+          }
+        } catch (error) {
+          console.log('Remote video reassign play failed, retrying...', error);
+          setTimeout(playRemoteVideo, 1000);
+        }
+      };
+      
+      playRemoteVideo();
     }
+  }, []);
+
+  // Manual cleanup function for partner disconnections
+  const cleanup = useCallback(() => {
+    console.log('Cleaning up WebRTC resources...');
+    
+    // Stop all tracks in local stream
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind);
+        track.stop();
+      });
+      localStreamRef.current = null;
+    }
+    
+    // Clear video elements
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+    
+    // Close peer connection
+    if (peerConnectionRef.current) {
+      console.log('Closing peer connection');
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    
+    // Clear remote stream reference
+    remoteStreamRef.current = null;
+    
+    // Reset states
+    setCallState('idle');
+    setIsMediaReady(false);
+    retryCountRef.current = 0;
   }, []);
 
   // Cleanup on unmount or when component is no longer needed
   useEffect(() => {
     return () => {
-      console.log('Cleaning up WebRTC resources...');
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => {
-          console.log('Stopping track:', track.kind);
-          track.stop();
-        });
-        localStreamRef.current = null;
-      }
-      if (peerConnectionRef.current) {
-        console.log('Closing peer connection');
-        peerConnectionRef.current.close();
-        peerConnectionRef.current = null;
-      }
-      setIsMediaReady(false);
-      setCallState('idle');
+      cleanup();
     };
-  }, []);
+  }, [cleanup]);
 
   return {
     localVideoRef,
@@ -531,6 +636,7 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
     handleSignal,
     callState,
     isMediaReady,
-    reassignVideoStreams
+    reassignVideoStreams,
+    cleanup
   };
 }

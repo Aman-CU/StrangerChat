@@ -112,9 +112,12 @@ export function useSocket(): UseSocketReturn {
             break;
             
           case 'partner_disconnected':
-            setSocketState('connected');
+            // Don't reset to 'connected' - the server should have put us back in queue
+            // The server will send the appropriate waiting state message
             setStatusMessage(data.message || 'Your partner has disconnected');
             setMessages([]);
+            // Signal to VideoChat component to cleanup WebRTC resources
+            window.dispatchEvent(new CustomEvent('partner_disconnected'));
             break;
             
           case 'report_submitted':

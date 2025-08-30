@@ -73,7 +73,8 @@ export function VideoChat({
     handleSignal,
     callState,
     isMediaReady,
-    reassignVideoStreams
+    reassignVideoStreams,
+    cleanup
   } = useWebRTC({ 
     onSignal: onWebRTCSignal, 
     isInitiator 
@@ -93,14 +94,21 @@ export function VideoChat({
       setMediaError('');
     };
 
+    const handlePartnerDisconnected = () => {
+      console.log('Partner disconnected - cleaning up WebRTC');
+      cleanup();
+    };
+
     window.addEventListener('webrtc_signal', handleWebRTCSignal as EventListener);
     window.addEventListener('media_error', handleMediaError as EventListener);
     window.addEventListener('clear_media_error', handleClearMediaError as EventListener);
+    window.addEventListener('partner_disconnected', handlePartnerDisconnected as EventListener);
     
     return () => {
       window.removeEventListener('webrtc_signal', handleWebRTCSignal as EventListener);
       window.removeEventListener('media_error', handleMediaError as EventListener);
       window.removeEventListener('clear_media_error', handleClearMediaError as EventListener);
+      window.removeEventListener('partner_disconnected', handlePartnerDisconnected as EventListener);
     };
   }, [handleSignal]);
 
@@ -435,7 +443,15 @@ export function VideoChat({
                           remoteVideoRef.current.play().catch(console.error);
                         }
                       }}
-                      onCanPlay={() => console.log('Remote video can play (horizontal)')}
+                      onCanPlay={() => {
+                        console.log('Remote video can play (horizontal)');
+                        if (remoteVideoRef.current) {
+                          remoteVideoRef.current.play().catch(console.error);
+                        }
+                      }}
+                      onPlay={() => {
+                        console.log('Remote video started playing (horizontal)');
+                      }}
                     />
                     
                     {/* Remote video placeholder */}
@@ -525,8 +541,21 @@ export function VideoChat({
                       isDarkMode ? 'bg-gray-900' : 'bg-gray-300'
                     }`}
                     data-testid="video-remote"
-                    onLoadedMetadata={() => console.log('Remote video metadata loaded')}
-                    onCanPlay={() => console.log('Remote video can play')}
+                    onLoadedMetadata={() => {
+                      console.log('Remote video metadata loaded (original)');
+                      if (remoteVideoRef.current) {
+                        remoteVideoRef.current.play().catch(console.error);
+                      }
+                    }}
+                    onCanPlay={() => {
+                      console.log('Remote video can play (original)');
+                      if (remoteVideoRef.current) {
+                        remoteVideoRef.current.play().catch(console.error);
+                      }
+                    }}
+                    onPlay={() => {
+                      console.log('Remote video started playing (original)');
+                    }}
                   />
 
                   {/* Remote video placeholder */}
