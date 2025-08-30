@@ -185,11 +185,15 @@ export function useSocket(): UseSocketReturn {
   }, []);
 
   const sendWebRTCSignal = useCallback((signal: WebRTCSignal) => {
+    console.log('Sending WebRTC signal via WebSocket:', signal.type);
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({
         type: 'webrtc_signal',
         signal
       }));
+      console.log('WebRTC signal sent successfully');
+    } else {
+      console.error('WebSocket not open, cannot send WebRTC signal');
     }
   }, []);
 

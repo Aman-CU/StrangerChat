@@ -599,6 +599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     // Forward the WebRTC signal to partner
+    console.log(`[WEBRTC] Forwarding ${signal.type} signal from ${socketId} to ${partnerId}`);
     partnerWs.send(JSON.stringify({
       type: 'webrtc_signal',
       signal: {

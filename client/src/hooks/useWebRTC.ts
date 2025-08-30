@@ -89,6 +89,7 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
           port: event.candidate.port
         });
         
+        console.log('Sending ICE candidate via onSignal...');
         onSignal({
           type: 'ice-candidate',
           data: event.candidate,
@@ -374,6 +375,7 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
           await peerConnection.setLocalDescription(offer);
           console.log('Offer created and set as local description');
 
+          console.log('Sending offer via onSignal...');
           onSignal({
             type: 'offer',
             data: offer,
@@ -437,6 +439,7 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
           await peerConnection.setLocalDescription(answer);
           console.log('Answer created and set as local description');
 
+          console.log('Sending answer via onSignal...');
           onSignal({
             type: 'answer',
             data: answer,
@@ -586,6 +589,33 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
   const cleanup = useCallback(() => {
     console.log('Cleaning up WebRTC resources...');
     
+    // Only clear remote video element, keep local video running
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+    
+    // Close peer connection
+    if (peerConnectionRef.current) {
+      console.log('Closing peer connection');
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    
+    // Clear remote stream reference
+    remoteStreamRef.current = null;
+    
+    // Reset call state but keep media ready
+    setCallState('idle');
+    retryCountRef.current = 0;
+    
+    // Keep local stream and media ready state for next connection
+    console.log('Local video preserved for next connection');
+  }, []);
+
+  // Full cleanup function for component unmount
+  const fullCleanup = useCallback(() => {
+    console.log('Full cleanup - stopping all media...');
+    
     // Stop all tracks in local stream
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
@@ -613,7 +643,7 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
     // Clear remote stream reference
     remoteStreamRef.current = null;
     
-    // Reset states
+    // Reset all states
     setCallState('idle');
     setIsMediaReady(false);
     retryCountRef.current = 0;
@@ -622,9 +652,9 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
   // Cleanup on unmount or when component is no longer needed
   useEffect(() => {
     return () => {
-      cleanup();
+      fullCleanup();
     };
-  }, [cleanup]);
+  }, [fullCleanup]);
 
   return {
     localVideoRef,

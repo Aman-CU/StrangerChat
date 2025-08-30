@@ -76,7 +76,10 @@ export function VideoChat({
     reassignVideoStreams,
     cleanup
   } = useWebRTC({ 
-    onSignal: onWebRTCSignal, 
+    onSignal: (signal) => {
+      console.log('WebRTC signal being sent to server:', signal.type);
+      onWebRTCSignal(signal);
+    }, 
     isInitiator 
   });
 
