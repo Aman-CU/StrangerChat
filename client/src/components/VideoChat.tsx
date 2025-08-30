@@ -140,7 +140,7 @@ export function VideoChat({
         createOffer().catch((error) => {
           console.error('Failed to create offer for paired connection:', error);
         });
-      }, 500); // Slightly longer delay to ensure peer connection is ready
+      }, 1000); // Longer delay to ensure both peers are ready
       
       return () => clearTimeout(timeoutId);
     }

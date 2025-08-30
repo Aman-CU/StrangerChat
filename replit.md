@@ -4,7 +4,26 @@
 
 Stranger Chat is an anonymous chat application similar to Omegle that allows users to connect randomly with other online users for real-time text and video conversations. The application is built as a full-stack solution using React for the frontend and Express with WebSocket support for the backend. Users can start chatting without any sign-up process, making it truly anonymous. The system includes essential moderation features like user reporting and comprehensive audit logging for safety and compliance.
 
-## Recent Changes (August 14, 2025)
+## Recent Changes (August 30, 2025)
+
+- **Fixed critical WebRTC signaling issues (August 30, 2025)**:
+  - Separated WebRTC offer creation from initial setup to ensure proper timing
+  - Added explicit offer triggering when initiator is paired and media ready
+  - Fixed "No peer connection available" errors by creating connections on demand
+  - Enhanced server-side pairing logic to properly avoid recent pairings
+  - Added comprehensive logging for WebRTC signaling debugging
+  - Improved timing delays to ensure peer connections are established before signaling
+- **Enhanced video pairing logic to match specified requirements**:
+  - When users click "Next", both are added to queue for re-matching
+  - Smart pairing avoids immediate re-connection when other users available
+  - Falls back to reconnecting same users only when no other options exist
+  - Added detailed matching logs to track pairing decisions
+- **Fixed local video preservation on partner disconnect**:
+  - Local video stream now preserved when partner disconnects
+  - Only remote video and peer connection are cleaned up
+  - Users can continue to next match without losing their video setup
+
+## Previous Changes (August 14, 2025)
 
 - Added WebRTC support for random video chat functionality
 - Implemented peer-to-peer video calling with audio/video controls

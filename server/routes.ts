@@ -444,32 +444,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to try matching video chat users with preference to avoid recent pairings
   async function tryMatchVideoUsersWithPreference(avoidPairing: string[] = []) {
     const waitingUsers = storage.getWaitingVideoUsers();
+    console.log(`[MATCH] Trying to match video users. Queue: ${waitingUsers.length}, Avoid: [${avoidPairing.join(', ')}]`);
+    
     if (waitingUsers.length >= 2) {
       let user1: SocketUser;
       let user2: SocketUser;
       
-      // If we have more than 2 users and want to avoid specific pairing, try that first
-      if (waitingUsers.length > 2 && avoidPairing.length === 2) {
-        // Find users that are not in the avoid list
-        const availableUsers = waitingUsers.filter(user => !avoidPairing.includes(user.socketId));
+      if (avoidPairing.length === 2) {
+        // Try to find different partners for users in avoidPairing
+        const user1Options = waitingUsers.filter(user => user.socketId === avoidPairing[0]);
+        const user2Options = waitingUsers.filter(user => user.socketId === avoidPairing[1]);
+        const otherUsers = waitingUsers.filter(user => !avoidPairing.includes(user.socketId));
         
-        if (availableUsers.length >= 2) {
-          // Pair two users that weren't just paired together
-          user1 = availableUsers[0];
-          user2 = availableUsers[1];
-        } else if (availableUsers.length === 1) {
-          // Only one new user, pair with one from avoid list
-          user1 = availableUsers[0];
-          user2 = waitingUsers.find(user => avoidPairing.includes(user.socketId))!;
+        console.log(`[MATCH] User1 in queue: ${user1Options.length}, User2 in queue: ${user2Options.length}, Others: ${otherUsers.length}`);
+        
+        if (otherUsers.length >= 2) {
+          // Pair two different users (not the ones from avoidPairing)
+          user1 = otherUsers[0];
+          user2 = otherUsers[1];
+          console.log(`[MATCH] Pairing two different users: ${user1.socketId} + ${user2.socketId}`);
+        } else if (otherUsers.length === 1 && (user1Options.length > 0 || user2Options.length > 0)) {
+          // Pair one from avoidPairing with one different user
+          user1 = otherUsers[0];
+          user2 = user1Options.length > 0 ? user1Options[0] : user2Options[0];
+          console.log(`[MATCH] Pairing one avoid user with different user: ${user1.socketId} + ${user2.socketId}`);
+        } else if (user1Options.length > 0 && user2Options.length > 0) {
+          // Only the avoid pair is available, pair them back together
+          user1 = user1Options[0];
+          user2 = user2Options[0];
+          console.log(`[MATCH] Only avoid pair available, reconnecting: ${user1.socketId} + ${user2.socketId}`);
         } else {
-          // All users are in avoid list, pair them anyway
+          // Standard fallback pairing
           user1 = waitingUsers[0];
           user2 = waitingUsers[1];
+          console.log(`[MATCH] Fallback pairing: ${user1.socketId} + ${user2.socketId}`);
         }
       } else {
         // Standard pairing logic
         user1 = waitingUsers[0];
         user2 = waitingUsers[1];
+        console.log(`[MATCH] Standard pairing: ${user1.socketId} + ${user2.socketId}`);
       }
       
       // Create video room

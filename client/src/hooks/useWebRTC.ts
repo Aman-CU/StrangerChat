@@ -360,10 +360,25 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
 
   // Handle WebRTC signals
   const handleSignal = useCallback(async (signal: WebRTCSignal) => {
-    const peerConnection = peerConnectionRef.current;
+    let peerConnection = peerConnectionRef.current;
     if (!peerConnection) {
-      console.log('No peer connection available for signal:', signal.type);
-      return;
+      console.log('No peer connection available for signal:', signal.type, '- creating new connection');
+      // If no peer connection exists, create one
+      try {
+        const stream = await getUserMedia();
+        peerConnection = initializePeerConnection();
+        
+        // Add local stream tracks to peer connection
+        stream.getTracks().forEach(track => {
+          console.log('Adding track to new peer connection:', track.kind);
+          peerConnection!.addTrack(track, stream);
+        });
+        
+        console.log('Created new peer connection for incoming signal');
+      } catch (error) {
+        console.error('Failed to create peer connection for signal:', error);
+        return;
+      }
     }
 
     try {
