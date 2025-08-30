@@ -74,7 +74,8 @@ export function VideoChat({
     callState,
     isMediaReady,
     reassignVideoStreams,
-    cleanup
+    cleanup,
+    createOffer
   } = useWebRTC({ 
     onSignal: (signal) => {
       console.log('WebRTC signal being sent to server:', signal.type);
@@ -129,6 +130,21 @@ export function VideoChat({
     
     return () => clearTimeout(timeoutId);
   }, []); // Remove dependencies to run only once on mount
+
+  // Trigger offer creation when initiator and not waiting (paired)
+  useEffect(() => {
+    if (isInitiator && !isWaiting && isMediaReady && callState === 'connecting') {
+      console.log('Initiator ready to create offer - triggering offer creation...');
+      const timeoutId = setTimeout(() => {
+        // Create an offer now that pairing is complete
+        createOffer().catch((error) => {
+          console.error('Failed to create offer for paired connection:', error);
+        });
+      }, 500); // Slightly longer delay to ensure peer connection is ready
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isInitiator, isWaiting, isMediaReady, callState, createOffer]);
 
   // Force video stream reassignment when call state or media state changes
   useEffect(() => {

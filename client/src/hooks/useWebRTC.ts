@@ -18,6 +18,7 @@ interface UseWebRTCReturn {
   isMediaReady: boolean;
   reassignVideoStreams: () => void;
   cleanup: () => void;
+  createOffer: () => Promise<void>;
 }
 
 // ICE servers configuration for WebRTC - Multiple STUN servers for better NAT traversal
@@ -343,49 +344,9 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
         peerConnection.addTrack(track, stream);
       });
 
-      // Set up local offer creation for initiator
+      // Don't create offer immediately, wait for explicit trigger
       if (isInitiator) {
-        console.log('Initiator creating offer...');
-        // Wait for ICE gathering to start before creating offer
-        const waitForIceGathering = new Promise<void>((resolve) => {
-          if (peerConnection.iceGatheringState === 'gathering' || peerConnection.iceGatheringState === 'complete') {
-            resolve();
-          } else {
-            const checkIceState = () => {
-              if (peerConnection.iceGatheringState === 'gathering' || peerConnection.iceGatheringState === 'complete') {
-                peerConnection.removeEventListener('icegatheringstatechange', checkIceState);
-                resolve();
-              }
-            };
-            peerConnection.addEventListener('icegatheringstatechange', checkIceState);
-            
-            // Fallback timeout
-            setTimeout(resolve, 200);
-          }
-        });
-        
-        await waitForIceGathering;
-        
-        try {
-          const offer = await peerConnection.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: true,
-            iceRestart: false
-          });
-          await peerConnection.setLocalDescription(offer);
-          console.log('Offer created and set as local description');
-
-          console.log('Sending offer via onSignal...');
-          onSignal({
-            type: 'offer',
-            data: offer,
-            from: '',
-            to: ''
-          });
-        } catch (offerError) {
-          console.error('Error creating offer:', offerError);
-          setCallState('failed');
-        }
+        console.log('Initiator setup complete, ready to create offer when triggered...');
       } else {
         console.log('Non-initiator waiting for offer...');
       }
@@ -656,6 +617,43 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
     };
   }, [fullCleanup]);
 
+  // Create offer function for explicit triggering
+  const createOffer = useCallback(async () => {
+    const peerConnection = peerConnectionRef.current;
+    if (!peerConnection) {
+      console.log('No peer connection available for offer creation');
+      return;
+    }
+
+    if (!isInitiator) {
+      console.log('Only initiator can create offers');
+      return;
+    }
+
+    try {
+      console.log('Creating offer for initiator...');
+      
+      const offer = await peerConnection.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+        iceRestart: false
+      });
+      await peerConnection.setLocalDescription(offer);
+      console.log('Offer created and set as local description');
+
+      console.log('Sending offer via onSignal...');
+      onSignal({
+        type: 'offer',
+        data: offer,
+        from: '',
+        to: ''
+      });
+    } catch (error) {
+      console.error('Error creating offer:', error);
+      setCallState('failed');
+    }
+  }, [isInitiator, onSignal]);
+
   return {
     localVideoRef,
     remoteVideoRef,
@@ -667,6 +665,7 @@ export function useWebRTC({ onSignal, isInitiator = false }: UseWebRTCProps): Us
     callState,
     isMediaReady,
     reassignVideoStreams,
-    cleanup
+    cleanup,
+    createOffer
   };
 }
