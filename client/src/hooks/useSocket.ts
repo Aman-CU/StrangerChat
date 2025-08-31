@@ -93,14 +93,24 @@ export function useSocket(): UseSocketReturn {
           case 'video_paired':
             console.log('Video paired received, isInitiator:', data.isInitiator);
             setSocketState('video_paired');
-            setStatusMessage(data.message || 'Connected for video chat! Preparing video...');
+            setStatusMessage('Connected for video chat! Preparing video...');
             setMessages([]); // Clear previous messages
             setIsInitiator(data.isInitiator || false);
+            
+            // Update status to show successful connection after initial setup
+            setTimeout(() => {
+              setStatusMessage('Connected for video chat!');
+            }, 2000);
             break;
             
           case 'webrtc_signal':
             // This will be handled by the video chat component
             window.dispatchEvent(new CustomEvent('webrtc_signal', { detail: data.signal }));
+            break;
+            
+          case 'webrtc_ready':
+            // Signal that WebRTC is ready to start
+            window.dispatchEvent(new CustomEvent('webrtc_ready'));
             break;
             
           case 'message':

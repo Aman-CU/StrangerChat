@@ -536,7 +536,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Ensure both sockets are ready for WebRTC
         setTimeout(() => {
           console.log(`[VIDEO] Ready to start WebRTC signaling for room ${room.id}`);
-        }, 100);
+          // Send a sync message to both clients to ensure they're ready
+          ws1.send(JSON.stringify({
+            type: 'webrtc_ready',
+            message: 'Ready for WebRTC signaling'
+          }));
+          ws2.send(JSON.stringify({
+            type: 'webrtc_ready', 
+            message: 'Ready for WebRTC signaling'
+          }));
+        }, 500); // Slightly longer delay
       } else {
         console.log('[ERROR] One or both WebSocket connections not available for video pairing');
       }

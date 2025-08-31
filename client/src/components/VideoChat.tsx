@@ -103,18 +103,32 @@ export function VideoChat({
       cleanup();
     };
 
+    const handleWebRTCReady = () => {
+      console.log('WebRTC ready signal received');
+      if (isInitiator && !isWaiting && isMediaReady) {
+        console.log('WebRTC ready - initiator creating offer immediately...');
+        setTimeout(() => {
+          createOffer().catch((error) => {
+            console.error('Failed to create offer on WebRTC ready:', error);
+          });
+        }, 500);
+      }
+    };
+
     window.addEventListener('webrtc_signal', handleWebRTCSignal as EventListener);
     window.addEventListener('media_error', handleMediaError as EventListener);
     window.addEventListener('clear_media_error', handleClearMediaError as EventListener);
     window.addEventListener('partner_disconnected', handlePartnerDisconnected as EventListener);
+    window.addEventListener('webrtc_ready', handleWebRTCReady as EventListener);
     
     return () => {
       window.removeEventListener('webrtc_signal', handleWebRTCSignal as EventListener);
       window.removeEventListener('media_error', handleMediaError as EventListener);
       window.removeEventListener('clear_media_error', handleClearMediaError as EventListener);
       window.removeEventListener('partner_disconnected', handlePartnerDisconnected as EventListener);
+      window.removeEventListener('webrtc_ready', handleWebRTCReady as EventListener);
     };
-  }, [handleSignal]);
+  }, [handleSignal, isInitiator, isWaiting, isMediaReady, createOffer]);
 
   // Initialize media immediately when component loads
   useEffect(() => {
@@ -140,7 +154,7 @@ export function VideoChat({
         createOffer().catch((error) => {
           console.error('Failed to create offer for paired connection:', error);
         });
-      }, 1000); // Longer delay to ensure both peers are ready
+      }, 2000); // Even longer delay to ensure both peers are fully ready
       
       return () => clearTimeout(timeoutId);
     }
