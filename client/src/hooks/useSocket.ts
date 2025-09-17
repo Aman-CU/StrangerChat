@@ -26,16 +26,14 @@ export function useSocket(): UseSocketReturn {
   const connect = useCallback(() => {
     if (ws.current?.readyState === WebSocket.OPEN) return;
 
-    // In Replit, we need to connect via the same origin as the web app
-    // The backend server handles both HTTP and WebSocket on the same port
+    // Resolve WebSocket endpoint
+    // 1) If VITE_WS_URL is set (e.g., client on Vercel, backend elsewhere), use it as-is
+    // 2) Otherwise default to same-origin /ws
     let wsUrl: string;
-    
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      // Local development
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      wsUrl = `${protocol}//${window.location.host}/ws`;
+    const envWsUrl = (import.meta as any)?.env?.VITE_WS_URL as string | undefined;
+    if (envWsUrl && envWsUrl.trim()) {
+      wsUrl = envWsUrl.trim();
     } else {
-      // Replit environment - use the same host but ensure proper protocol
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       wsUrl = `${protocol}//${window.location.host}/ws`;
     }
@@ -75,6 +73,8 @@ export function useSocket(): UseSocketReturn {
             setSocketState('waiting');
             setStatusMessage(data.message || 'Looking for someone to chat with...');
             setMessages([]); // Clear previous messages
+            // Ensure any previous WebRTC connection is cleaned up before next pairing
+            window.dispatchEvent(new CustomEvent('partner_disconnected'));
             break;
             
           case 'paired':
@@ -88,6 +88,8 @@ export function useSocket(): UseSocketReturn {
             setSocketState('video_waiting');
             setStatusMessage(data.message || 'Looking for someone to video chat with...');
             setMessages([]); // Clear previous messages
+            // Ensure any previous WebRTC connection is cleaned up before next video pairing
+            window.dispatchEvent(new CustomEvent('partner_disconnected'));
             break;
             
           case 'video_paired':
@@ -96,11 +98,6 @@ export function useSocket(): UseSocketReturn {
             setStatusMessage('Connected for video chat! Preparing video...');
             setMessages([]); // Clear previous messages
             setIsInitiator(data.isInitiator || false);
-            
-            // Update status to show successful connection after initial setup
-            setTimeout(() => {
-              setStatusMessage('Connected for video chat!');
-            }, 2000);
             break;
             
           case 'webrtc_signal':
@@ -126,6 +123,16 @@ export function useSocket(): UseSocketReturn {
             // The server will send the appropriate waiting state message
             setStatusMessage(data.message || 'Your partner has disconnected');
             setMessages([]);
+            // Immediately reflect waiting state in UI to avoid stale "Connected" banners
+            setSocketState((prev) => {
+              if (prev === 'video_paired' || prev === 'video_waiting') {
+                return 'video_waiting';
+              }
+              if (prev === 'paired' || prev === 'waiting') {
+                return 'waiting';
+              }
+              return prev;
+            });
             // Signal to VideoChat component to cleanup WebRTC resources
             window.dispatchEvent(new CustomEvent('partner_disconnected'));
             break;
@@ -216,6 +223,8 @@ export function useSocket(): UseSocketReturn {
       }));
       setMessages([]);
       setStatusMessage(isVideoMode ? 'Looking for a new person to video chat with...' : 'Looking for a new person to chat with...');
+      // Optimistically set waiting state so UI updates immediately
+      setSocketState(isVideoMode ? 'video_waiting' : 'waiting');
     }
   }, [socketState]);
 

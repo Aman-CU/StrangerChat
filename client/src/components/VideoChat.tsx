@@ -106,7 +106,13 @@ export function VideoChat({
     const handleWebRTCReady = () => {
       console.log('WebRTC ready signal received');
       if (isInitiator && !isWaiting && isMediaReady) {
-        console.log('WebRTC ready - initiator creating offer immediately...');
+        console.log('WebRTC ready - ensuring peer connection exists before creating offer...');
+        // If we previously cleaned up, callState will be 'idle'. Restart media/PC.
+        if (callState === 'idle') {
+          startCall().catch((error) => {
+            console.error('Failed to (re)start call on WebRTC ready:', error);
+          });
+        }
         setTimeout(() => {
           createOffer().catch((error) => {
             console.error('Failed to create offer on WebRTC ready:', error);
@@ -128,7 +134,7 @@ export function VideoChat({
       window.removeEventListener('partner_disconnected', handlePartnerDisconnected as EventListener);
       window.removeEventListener('webrtc_ready', handleWebRTCReady as EventListener);
     };
-  }, [handleSignal, isInitiator, isWaiting, isMediaReady, createOffer]);
+  }, [handleSignal, isInitiator, isWaiting, isMediaReady, createOffer, callState, startCall]);
 
   // Initialize media immediately when component loads
   useEffect(() => {
@@ -159,6 +165,17 @@ export function VideoChat({
       return () => clearTimeout(timeoutId);
     }
   }, [isInitiator, isWaiting, isMediaReady, callState, createOffer]);
+
+  // After Next/partner disconnect, we may cleanup to 'idle'. When new pair arrives
+  // and we're not waiting anymore, proactively (re)start call to recreate the peer connection.
+  useEffect(() => {
+    if (!isWaiting && callState === 'idle' && isMediaReady) {
+      console.log('Re-initializing call after new pairing (idle -> start)...');
+      startCall().catch((error) => {
+        console.error('Failed to re-initialize call after pairing:', error);
+      });
+    }
+  }, [isWaiting, callState, isMediaReady, startCall]);
 
   // Force video stream reassignment when call state or media state changes
   useEffect(() => {
