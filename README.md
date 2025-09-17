@@ -17,7 +17,7 @@ Built with modern web technologies, StrangerChat is lightweight, scalable, and p
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** React + Typescript + Vite 
+- **Frontend:** React + Tailwind + Typescript + Vite 
 - **Backend:** Node.js + Express  
 - **Real-time:** WebRTC, Socket.io  
 - **Database:** (postgresStorage or MemStorage)  
