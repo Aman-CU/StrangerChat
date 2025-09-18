@@ -33,6 +33,9 @@ export function useSocket(): UseSocketReturn {
     const envWsUrl = (import.meta as any)?.env?.VITE_WS_URL as string | undefined;
     if (envWsUrl && envWsUrl.trim()) {
       wsUrl = envWsUrl.trim();
+    } else if (window.location.hostname.endsWith("vercel.app")) {
+      // Hard fallback for Vercel client when env is missing: point to Render backend
+      wsUrl = "wss://strangerchat-21aq.onrender.com/ws";
     } else {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       wsUrl = `${protocol}//${window.location.host}/ws`;
