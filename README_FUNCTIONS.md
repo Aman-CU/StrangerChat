@@ -306,7 +306,7 @@ Keep the same interface, just change the implementation
 Would you like me to:
 Show you how to set up PostgreSQL with your existing Drizzle setup?
 Create a PostgresStorage class that replaces MemStorage?
-Add a simple database migration script?
+Add a simple database migration script
 
 
 
